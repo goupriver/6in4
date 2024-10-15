@@ -237,16 +237,17 @@ case "$1" in
             exit
         fi
         ip link set $TUNNEL_NAME up mtu $LINK_MTU
+        
         # IP КЛИЕНТА ДОБАВЛЯЕМ
-        ip addr add "${ENDPOINT_PREFIX}2/${CURRENT_TARGET_CIDR}" dev $TUNNEL_NAME
-        ip route add "${SUBNET_PREFIX}/${TARGET_CIDR}" dev $TUNNEL_NAME
         CURRENT_TARGET_CIDR=127
+        ip addr add "${ENDPOINT_PREFIX}3/${CURRENT_TARGET_CIDR}" dev $TUNNEL_NAME
+        ip route add "${SUBNET_PREFIX}/${TARGET_CIDR}" dev $TUNNEL_NAME
 
         echo "Please set up tunnel on your machine with following parameters:"
         echo "    Server IPv4 Address:        $LOCAL_IP"
-        echo "    Server IPv6 Address:        ${ENDPOINT_PREFIX}2/${CURRENT_TARGET_CIDR}"
+        echo "    Server IPv6 Address:        ${ENDPOINT_PREFIX}3/${CURRENT_TARGET_CIDR}"
         echo "    Client IPv4 Address:        $REMOTE_IP"
-        echo "    Client IPv6 Address:        ${ENDPOINT_PREFIX}1/${CURRENT_TARGET_CIDR}"
+        echo "    Client IPv6 Address:        ${ENDPOINT_PREFIX}2/${CURRENT_TARGET_CIDR}"
         echo "    Routed /${TARGET_CIDR}:                 ${SUBNET_PREFIX}/${TARGET_CIDR}"
         echo ""
         echo "If you don't have a static IP, set your local to 0.0.0.0 and invoke update api to update your endpoint"
