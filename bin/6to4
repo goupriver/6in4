@@ -159,7 +159,8 @@ else
     SN_IN_HEX=$(printf $FORMAT $TUNNEL_ID)     
 
     #2a12:5940:76c5:0001::
-    ENDPOINT_PREFIX="${IPV6_NETWORK_NEW}${SN_IN_HEX}::"
+    # ENDPOINT_PREFIX="${IPV6_NETWORK_NEW}${SN_IN_HEX}::"
+    ENDPOINT_PREFIX="${IPV6_NETWORK_NEW}::"
 
     # опять  ип клиента по айди, но теперь с 8 начинается (8001)
     SN_IN_HEX=$(printf $FORMAT $(($TUNNEL_ID | 1 << $CIDR_DIFF_EXP)))
@@ -173,7 +174,7 @@ TUNNEL_NAME=tun_6in4_$TUNNEL_ID
 TUNNEL_MODE=sit
 
 # Tunnel TTL
-TUNNEL_TTL=255
+TUNNEL_TTL=64
 
 # Read Interface
 INTERFACE=$(awk -F "=" '/^INTERFACE/ {print $2}' $CONFIG_FILE)
@@ -240,7 +241,7 @@ case "$1" in
         
         # IP КЛИЕНТА ДОБАВЛЯЕМ
         CURRENT_TARGET_CIDR=127
-        ip addr add "${ENDPOINT_PREFIX}3/${CURRENT_TARGET_CIDR}" dev $TUNNEL_NAME
+        ip addr add "${ENDPOINT_PREFIX}/${CURRENT_TARGET_CIDR}" dev $TUNNEL_NAME
         ip route add "${SUBNET_PREFIX}/${TARGET_CIDR}" dev $TUNNEL_NAME
 
         echo "Please set up tunnel on your machine with following parameters:"
