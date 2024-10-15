@@ -40,6 +40,17 @@ fi
 # sipcalc result
 SIPCALC_RESULT=$($SIPCALC $IPV6_NETWORK)
 
+# [IPV6 INFO]
+# Expanded Address	- 2a12:5940:76c5:0000:0000:0000:0000:0002
+# Compressed address	- 2a12:5940:76c5::2
+# Subnet prefix (masked)	- 2a12:5940:76c5:0:0:0:0:2/128
+# Address ID (masked)	- 0:0:0:0:0:0:0:0/128
+# Prefix address		- ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+# Prefix length		- 128
+# Address type		- Aggregatable Global Unicast Addresses
+# Network range		- 2a12:5940:76c5:0000:0000:0000:0000:0002 -
+# 			  2a12:5940:76c5:0000:0000:0000:0000:0002
+
 if [[ -n $(echo $SIPCALC_RESULT | grep ERR) ]]; then
     echo "Bad IPV6_NETWORK"
     exit
@@ -47,6 +58,7 @@ fi
 
 # Read IPV6_CIDR from Config
 IPV6_CIDR=$(awk -F "=" '/^IPV6_CIDR/ {print $2}' $CONFIG_FILE) 
+# 48
 if [[ "$IPV6_CIDR" == "" ]]; then
     echo "Missing IPV6_CIDR"
     exit
@@ -61,13 +73,13 @@ fi
 
 # Validate Tunnel ID
 validate_tunnel_id() {
-    if [[ $TUNNEL_ID -lt $TUNNEL_ID_MIN ]]; then
+    if [[ $TUNNEL_ID -lt $TUNNEL_ID_MIN ]]; then # <
         echo Invalid TUNNEL_ID $TUNNEL_ID. MUST BE ${TUNNEL_ID_MIN}-${TUNNEL_ID_MAX}
         usage 
         exit
     fi
 
-    if [[ $TUNNEL_ID -gt $TUNNEL_ID_MAX ]]; then
+    if [[ $TUNNEL_ID -gt $TUNNEL_ID_MAX ]]; then # >
         echo Invalid TUNNEL_ID $TUNNEL_ID. MUST BE ${TUNNEL_ID_MIN}-${TUNNEL_ID_MAX}
         usage
         exit
@@ -84,8 +96,11 @@ TUNNEL_ID_MIN=0
 TARGET_CIDR=64
 
 EXPANDED_IPV6_ADDRESS=`echo "$SIPCALC_RESULT" | fgrep Expanded | awk -F '-' '{print $2}'`
+#  2a12:5940:76c5:0000:0000:0000:0000:0002
 
-if [[ $IPV6_CIDR -ge $TARGET_CIDR ]]; then
+# больше или равно я пропускаю. т.к моя подсеть меньше TARGET_CIDR или 64
+if [[ $IPV6_CIDR -ge $TARGET_CIDR ]]; then  # ge >=
+    # оставляем только адрес сети без адреса хоста
     IPV6_NETWORK_NEW=${EXPANDED_IPV6_ADDRESS:1:$(( $IPV6_CIDR / 16 + $IPV6_CIDR / 4))}
 
     echo "***************************** WARNING ********************************"
@@ -93,7 +108,7 @@ if [[ $IPV6_CIDR -ge $TARGET_CIDR ]]; then
     echo "***************************** WARNING ********************************"
     echo ""
 
-    if [[ $IPV6_CIDR -gt 96 ]]; then
+    if [[ $IPV6_CIDR -gt 96 ]]; then # gt >
         echo "A block smalller than /96 is not supported."
         exit
     fi
@@ -120,28 +135,33 @@ if [[ $IPV6_CIDR -ge $TARGET_CIDR ]]; then
 else 
     # parse block and create correct IP    
  
-    if [[ $IPV6_CIDR -le 48 ]]; then
+    if [[ $IPV6_CIDR -le 48 ]]; then  # <=
         IPV6_CIDR=48;
     fi   
 
-    CIDR_DIFF=$(( $TARGET_CIDR - $IPV6_CIDR ))
-    CIDR_DIFF_EXP=$(( $CIDR_DIFF - 1 ))
-    CIDR_DIFF_NUMBITS=$(( $CIDR_DIFF / 4 ))
+    CIDR_DIFF=$(( $TARGET_CIDR - $IPV6_CIDR )) # 64 - 48 = 16
+    CIDR_DIFF_EXP=$(( $CIDR_DIFF - 1 )) # 15
+    CIDR_DIFF_NUMBITS=$(( $CIDR_DIFF / 4 )) # 4
 
-    TUNNEL_ID_MAX=$(( 2 ** $CIDR_DIFF_EXP - 1 ))
+    TUNNEL_ID_MAX=$(( 2 ** $CIDR_DIFF_EXP - 1 )) #32767
     validate_tunnel_id
 
     IPV6_NETWORK_NEW=${EXPANDED_IPV6_ADDRESS:1:$(( $IPV6_CIDR / 16 + $IPV6_CIDR / 4 ))}
+    # 2a12:5940:76c5:
 
-    if [[ $CIDR_DIFF_EXP -eq 15 ]]; then
-        FORMAT='%04x'
+    if [[ $CIDR_DIFF_EXP -eq 15 ]]; then # =
+        FORMAT='%04x' #! шестнадцатеричный?
     else 
         FORMAT='%02x'
     fi
+    
+    # шестнадцатеричный номер пира/клиента. для ipv6 адреса (0001)
+    SN_IN_HEX=$(printf $FORMAT $TUNNEL_ID)     
 
-    SN_IN_HEX=$(printf $FORMAT $TUNNEL_ID)
+    #2a12:5940:76c5:0001::
     ENDPOINT_PREFIX="${IPV6_NETWORK_NEW}${SN_IN_HEX}::"
 
+    # опять  ип клиента по айди, но теперь с 8 начинается (8001)
     SN_IN_HEX=$(printf $FORMAT $(($TUNNEL_ID | 1 << $CIDR_DIFF_EXP)))
     SUBNET_PREFIX="${IPV6_NETWORK_NEW}${SN_IN_HEX}::"
 fi
@@ -172,8 +192,11 @@ fi
 
 # Read Local IP
 BIND_IP=$(awk -F "=" '/^BIND_IP/ {print $2}' $CONFIG_FILE)
-if [[ -z "$BIND_IP" ]]; then
+
+# если пустая или неинициализированная
+if [[ -z "$BIND_IP" ]]; then  
     # Read first IP if BIND_IP is not set
+    # получаем IP
     LOCAL_IP=$(ip -f inet addr show ${INTERFACE} scope global |grep inet | awk '{print $2}' | awk -F '/' '{print $1}' | head -n 1)
 else
     # Check if BIND_IP exists
@@ -214,14 +237,16 @@ case "$1" in
             exit
         fi
         ip link set $TUNNEL_NAME up mtu $LINK_MTU
-        ip addr add "${ENDPOINT_PREFIX}1/${TARGET_CIDR}" dev $TUNNEL_NAME
+        # IP КЛИЕНТА ДОБАВЛЯЕМ
+        ip addr add "${ENDPOINT_PREFIX}2/${CURRENT_TARGET_CIDR}" dev $TUNNEL_NAME
         ip route add "${SUBNET_PREFIX}/${TARGET_CIDR}" dev $TUNNEL_NAME
+        CURRENT_TARGET_CIDR=127
 
         echo "Please set up tunnel on your machine with following parameters:"
         echo "    Server IPv4 Address:        $LOCAL_IP"
-        echo "    Server IPv6 Address:        ${ENDPOINT_PREFIX}1/${TARGET_CIDR}"
+        echo "    Server IPv6 Address:        ${ENDPOINT_PREFIX}2/${CURRENT_TARGET_CIDR}"
         echo "    Client IPv4 Address:        $REMOTE_IP"
-        echo "    Client IPv6 Address:        ${ENDPOINT_PREFIX}2/${TARGET_CIDR}"
+        echo "    Client IPv6 Address:        ${ENDPOINT_PREFIX}1/${CURRENT_TARGET_CIDR}"
         echo "    Routed /${TARGET_CIDR}:                 ${SUBNET_PREFIX}/${TARGET_CIDR}"
         echo ""
         echo "If you don't have a static IP, set your local to 0.0.0.0 and invoke update api to update your endpoint"
