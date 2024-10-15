@@ -160,7 +160,7 @@ else
 
     #2a12:5940:76c5:0001::
     # ENDPOINT_PREFIX="${IPV6_NETWORK_NEW}${SN_IN_HEX}::"
-    ENDPOINT_PREFIX="${IPV6_NETWORK_NEW}::"
+    ENDPOINT_PREFIX="${IPV6_NETWORK_NEW}:"
 
     # опять  ип клиента по айди, но теперь с 8 начинается (8001)
     SN_IN_HEX=$(printf $FORMAT $(($TUNNEL_ID | 1 << $CIDR_DIFF_EXP)))
